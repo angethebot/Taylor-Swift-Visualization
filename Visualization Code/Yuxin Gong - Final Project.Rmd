@@ -1,0 +1,1090 @@
+---
+title: "STAT 442/842, CM 762 W25 Assignment 4"
+subtitle: "DUE: Friday April 4 by 11:59pm EST"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    keep_tex: yes
+    number_sections: no
+    latex_engine: xelatex
+  word_document: default
+urlcolor: blue
+---
+
+In this project, I visualized the Taylor Swift's music statistics including her album sales, song popularity, song emotion, and the Eras Tour statistics.
+
+1. data source: 
+Kaggle Taylor Swift Spotify Dataset, 
+Kaggle Taylor Swift Eras Tour, 
+Kaggle Taylor Swift All Lyrics (64 Albums) [with TTPD], 
+Reddit Sales of Taylor Swift's albums: https://www.reddit.com/r/TrueSwifties/comments/1hgqzs5/taylors_album_sales_updated/
+
+2. main goals:
+(1) Visualize Taylor Swift's 11 Album's along time and their sales using Manim (Option 6)
+(2) Visualize Taylor Swift's all songs in terms of their dancibility, duration, and popularity using a 3D plot;(Option 1)
+(3) Visualize Taylor's song emotions in each album using Sankey plot (Option 3)
+(4) Visualize Eras Tour itinerary using leaflet. (Option 2)
+(5) Additionally, I used magick to create a animated pixel art of Taylor as well used generative art to blend all Taylor album colors to generate background (Color flow: top = Debut → bottom = TTPD) (option 4)
+
+
+Notes
+1. My infographic wants to be 1200x2400
+
+# Taylor's headshot animated
+```{r}
+library(magick)
+
+# Load original image
+img = image_read("Taylor Headshot Animated/taylor.jpg")  # or your .png
+
+# Define grid sizes for animation
+sizes = c(20, 40, 80, 150, 300, 600, 800)
+
+# Generate frames
+frames = lapply(sizes, function(s) {
+  img_small = image_scale(img, paste0(s, "x", s, "!"))
+  img_blocky = image_scale(img_small, paste0(600, "x", 600, "!"))
+  image_border(img_blocky, "white", "5x5")
+})
+
+# Animate!
+animation = image_animate(image_join(frames), fps = 2)
+
+# View
+print(animation)
+image_write(animation, "Taylor Headshot Animated/taylor_pixel_art.gif")
+```
+
+# Option 4: Background using generative Art
+
+```{r}
+library(grid)
+library(png)
+
+# 1. Full Taylor color palette (3 colors per album)
+colors = c(
+  # Taylor Swift (Debut)
+  "#d1cfc4", "#a3b5c1", "#6a8e7f",
+  # Fearless
+  "#f5e4b7", "#d8c28f", "#bfa76f",
+  # Speak Now
+  "#cba3d8", "#8e6aa9", "#f3e3f7",
+  # Red
+  "#b11e2b", "#5a5a5a", "#f2f2f2",
+  # 1989
+  "#cfdbe6", "#f0e6d6", "#a9b7c2",
+  # Reputation
+  "#1a1a1a", "#7f7f7f", "#d9d9d9",
+  # Lover
+  "#f7c6d9", "#b3d9f7", "#fef0b3",
+  # Folklore
+  "#d6d6d6", "#a8a8a8", "#7a7a7a",
+  # Evermore
+  "#a0522d", "#deb887", "#8b4513",
+  # Midnights
+  "#2c3e50", "#34495e", "#ecf0f1",
+  # TTPD (The Tortured Poets Department)
+  "#a9a9a9", "#c0c0c0", "#dcdcdc"
+)
+# Color flow: top = Debut → bottom = TTPD
+
+# 2. Set up canvas
+width = 1200
+height = 2400
+segment_height = height / (length(colors) - 1)
+
+
+# 4. Generate smooth gradient using linear interpolation
+interpolate_colors <- function(c1, c2, n) {
+  col1 <- col2rgb(c1) / 255
+  col2 <- col2rgb(c2) / 255
+  steps <- matrix(NA, nrow = 3, ncol = n)
+  for (i in 1:n) {
+    alpha <- (i - 1) / (n - 1)
+    steps[, i] <- (1 - alpha) * col1 + alpha * col2
+  }
+  rgb(steps[1, ], steps[2, ], steps[3, ])
+}
+
+# 5. Generate full color sequence
+final_colors <- c()
+for (i in 1:(length(colors) - 1)) {
+  interp <- interpolate_colors(colors[i], colors[i + 1], segment_height)
+  final_colors <- c(final_colors, interp)
+}
+# Create and draw vertical gradient background
+png("swift_vertical_background.png", width = width, height = height)
+grid.newpage()
+for (i in 1:height) {
+  grid.rect(y = 1 - i / height, x = 0.5, height = 1 / height, width = 1,
+            gp = gpar(col = NA, fill = final_colors[i]), just = "center")
+}
+dev.off()
+
+```
+
+
+
+# (1) Option 6: Manim visualization
+chartmasters.org/taylor-swift-albums-and-songs-sales/ 
+
+
+
+# (2) Option 1: Visualize Taylor Swift's all songs in terms of their dancibility, duration, and popularity using a 3D plot, color coded by album using high-contrast
+
+https://www.kaggle.com/datasets/jarredpriester/taylor-swift-spotify-dataset/data?select=taylor_swift_spotify.csv
+
+
+The dataset used here consist of data from Spotify's API on all albums listed on Spotify for Taylor Swift. I have filtered the dataste to only include the 11 original (non-Taylor's version) studio albums.
+
+I used the following three variables to construct the popularity of Taylor's songs based on dancibility and duration:
+(1) duration_ms: The duration of the track in millisecond (this variable will be replaced by duration_min)
+(2) danceability :The danceability of the song ranges from 0 to 1, from least danceable to most danceable. Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. 
+(3) popularity: The popularity of the song ranges from 0 to 100. It is created by Spotify and reflects an artist's or track's current level of listener engagement and appeal on the platform. It's calculated by an algorithm based on various factors like the number of streams, user interactions (saves, shares, etc.), and inclusion in popular playlists. 
+
+As is shown in the 3D plot below, Swifties in general prefer songs of less danceability - this aligns with the music Taylor is famous for (Country music as a starter and then transition to synth pop with a heavy focus on story-telling instead of pure pop music); Swifties also prefer longer songs as they may serve a better purpose of telling stories.
+
+
+```{r fig.width = 10, fig.height = 10, out.width = '100%', dev = 'html'}
+library(plotly)
+
+spotify = read.csv("taylor_spotify.csv", stringsAsFactors = FALSE)
+spotify$duration_min = spotify$duration_ms / 60000
+spotify$album = trimws(spotify$album)
+
+
+# Define album colors
+album_colors_retired = c(
+  "Taylor Swift (Deluxe Edition)" = "#d1cfc4",
+  "Fearless (Platinum Edition)"   = "#f5e4b7",
+  "Speak Now"                     = "#cba3d8",
+  "Red"                           = "#b11e2b",
+  "1989"                          = "#cfdbe6",
+  "reputation"                    = "#1a1a1a",
+  "Lover"                         = "#f7c6d9",
+  "folklore"                      = "#d6d6d6",
+  "evermore"                      = "#a0522d",
+  "Midnights"                     = "#2c3e50",
+  "THE TORTURED POETS DEPARTMENT" = "#a9a9a9"
+)
+
+
+# Define album colors
+album_colors = c(
+  "Taylor Swift (Deluxe Edition)"      = "#E5C07B",  # warm gold beige
+  "Fearless (Platinum Edition)"        = "#F4BF75",  # soft amber
+  "Speak Now"                          = "#C586C0",  # muted orchid purple
+  "Red"                                = "#D84C4C",  # rich crimson
+  "1989"                               = "#7FBDE0",  # icy blue
+  "reputation"                         = "#B0B0B0",  # soft silver-gray
+  "Lover"                              = "#F2A7C2",  # soft pink rose
+  "folklore"                           = "#A8B3A7",  # misty green-gray
+  "evermore"                           = "#D9A066",  # muted rust gold
+  "Midnights"                          = "#7A8CE2",  # slate blue
+  "THE TORTURED POETS DEPARTMENT"     = "#BCAECF"   # lilac smoke
+)
+spotify$album = factor(spotify$album, levels = names(album_colors))
+spotify$album_color = album_colors[as.character(spotify$album)]
+
+# Fit model
+model = lm(popularity ~ duration_min * danceability, data = spotify)
+
+# Prediction grid
+grid_x = seq(min(spotify$duration_min), max(spotify$duration_min), length.out = 60)
+grid_y = seq(min(spotify$danceability), max(spotify$danceability), length.out = 60)
+grid = expand.grid(duration_min = grid_x, danceability = grid_y)
+grid$popularity = predict(model, newdata = grid)
+z_matrix = matrix(grid$popularity, nrow = 60, byrow = FALSE)
+dimnames(z_matrix) = NULL
+
+# Hover text
+hover_text = paste0(
+  "Song: ", spotify$name,
+  "<br>Album: ", spotify$album,
+  "<br>Popularity: ", spotify$popularity
+)
+
+# Build plot with OLS surface and custom-colored points
+p = plot_ly()
+
+# Add surface with reversed viridis
+p = p %>% add_surface(
+  x = grid_x,
+  y = grid_y,
+  z = z_matrix,
+  opacity = 0.6,
+  colorscale = "Viridis",
+  reversescale = TRUE,
+  showscale = TRUE,
+  colorbar = list(
+    title = list(text = "Popularity", font = list(color = "white")),
+    tickfont = list(color = "white"),
+    bgcolor = "#00000080",
+    bordercolor = "white"
+  ),
+  name = "OLS Surface",
+  hoverinfo = "skip"
+)
+
+# Add one marker trace per album to retain color and legend control
+for (alb in names(album_colors)) {
+  album_data = subset(spotify, album == alb)
+  p = p %>% add_markers(
+    data = album_data,
+    x = ~duration_min,
+    y = ~danceability,
+    z = ~popularity,
+    marker = list(color = album_colors[alb], size = 4),
+    text = paste0(
+      "Song: ", album_data$name,
+      "<br>Album: ", alb,
+      "<br>Popularity: ", album_data$popularity
+    ),
+    hoverinfo = "text",
+    name = alb,
+    legendgroup = alb,
+    showlegend = TRUE
+  )
+}
+
+# Layout with black background and white text/grid/legend
+p = p %>% layout(
+  title = list(
+    text = "Popularity of all songs across Duration and Danceability (Color-coded by Album)",
+    font = list(color = "white")
+  ),
+  scene = list(
+    xaxis = list(title = "Duration (minutes)", color = "white", gridcolor = "white", zerolinecolor = "white"),
+    yaxis = list(title = "Danceability", color = "white", gridcolor = "white", zerolinecolor = "white"),
+    zaxis = list(title = "Popularity", color = "white", gridcolor = "white", zerolinecolor = "white"),
+    backgroundcolor = "#00000080"
+  ),
+  paper_bgcolor = "#00000080",
+  plot_bgcolor = "#00000080",
+  legend = list(
+    font = list(size = 12, color = "white"),
+    title = list(text = "Album (Click to (un)choose album(s))", font = list(color = "white"))
+  )
+)
+
+
+p
+
+library(htmlwidgets)
+saveWidget(p, "song_popularity_plot.html", selfcontained = TRUE)
+
+
+```
+
+
+
+
+```{r}
+# Abandoned
+
+# Due to the limitation of plotly, in 3D plots, we cannot customize the second set of color palette so here I am using the default color palette from RColorBrewer
+
+library(plotly)
+
+spotify = read.csv("taylor_spotify.csv", stringsAsFactors = FALSE)
+spotify$duration_min = spotify$duration_ms / 60000
+
+# Clean album names
+spotify$album = trimws(spotify$album)
+
+# Define album colors
+album_colors_retired = c(
+  "Taylor Swift (Deluxe Edition)" = "#d1cfc4",
+  "Fearless (Platinum Edition)"   = "#f5e4b7",
+  "Speak Now"                     = "#cba3d8",
+  "Red"                           = "#b11e2b",
+  "1989"                          = "#cfdbe6",
+  "reputation"                    = "#1a1a1a",
+  "Lover"                         = "#f7c6d9",
+  "folklore"                      = "#d6d6d6",
+  "evermore"                      = "#a0522d",
+  "Midnights"                     = "#2c3e50",
+  "THE TORTURED POETS DEPARTMENT" = "#a9a9a9"
+)
+
+album_colors <- c(
+  "Taylor Swift (Deluxe Edition)"      = "#E5C07B",  # warm gold beige
+  "Fearless (Platinum Edition)"        = "#F4BF75",  # soft amber
+  "Speak Now"                          = "#C586C0",  # muted orchid purple
+  "Red"                                = "#D84C4C",  # rich crimson
+  "1989"                               = "#7FBDE0",  # icy blue
+  "reputation"                         = "#B0B0B0",  # soft silver-gray
+  "Lover"                              = "#F2A7C2",  # soft pink rose
+  "folklore"                           = "#A8B3A7",  # misty green-gray
+  "evermore"                           = "#D9A066",  # muted rust gold
+  "Midnights"                          = "#7A8CE2",  # slate blue
+  "THE TORTURED POETS DEPARTMENT"     = "#BCAECF"   # lilac smoke
+)
+
+spotify$album = factor(spotify$album, levels = names(album_colors))
+spotify$album_color = album_colors[as.character(spotify$album)]
+
+# Fit model
+model = lm(popularity ~ duration_min * danceability, data = spotify)
+
+# Prediction grid
+grid_x = seq(min(spotify$duration_min), max(spotify$duration_min), length.out = 60)
+grid_y = seq(min(spotify$danceability), max(spotify$danceability), length.out = 60)
+grid = expand.grid(duration_min = grid_x, danceability = grid_y)
+grid$popularity = predict(model, newdata = grid)
+z_matrix = matrix(grid$popularity, nrow = 60, byrow = FALSE)
+dimnames(z_matrix) = NULL
+
+# Hover text
+hover_text = paste0(
+  "Song: ", spotify$name,
+  "<br>Album: ", spotify$album,
+  "<br>Popularity: ", spotify$popularity
+)
+
+# Plot
+p_light = plot_ly() %>%
+  # OLS surface with reversed Viridis scale and colorbar title
+  add_surface(
+    x = grid_x,
+    y = grid_y,
+    z = z_matrix,
+    opacity = 0.6,
+    colorscale = 'Viridis',
+    reversescale = TRUE,
+    showscale = TRUE,
+    colorbar = list(title = "Popularity"),
+    name = 'OLS Surface',
+    hoverinfo = "skip"
+  ) %>%
+  # Album-colored markers with proper legend label
+  add_markers(
+    data = spotify,
+    x = ~duration_min,
+    y = ~danceability,
+    z = ~popularity,
+    color = ~album,
+    colors = album_colors,
+    text = hover_text,
+    hoverinfo = "text",
+    marker = list(size = 4),
+    showlegend = TRUE
+  ) %>%
+  layout(
+    scene = list(
+      xaxis = list(title = "Duration (minutes)"),
+      yaxis = list(title = "Danceability"),
+      zaxis = list(title = "Popularity")
+    ),
+    title = "Popularity of all songs across Duration and Danceability (Color-coded by Album)",
+    legend = list(title = list(text = "Album (Click to (un)choose album(s))"))
+  )
+
+p_light
+
+```
+
+# Option 3&4: Visualize Taylor's song emotions in each album using Chord Diagram and base R.
+
+https://www.kaggle.com/datasets/ishikajohari/taylor-swift-all-lyrics-30-albums
+https://www.kaggle.com/datasets/lucynewman/taylor-swift-lyrics-through-2024-ttpd
+https://www.kaggle.com/datasets/tksmax/taylorswiftlyrics
+
+I analyzed the lyrics from all songs across Taylor Swift’s 11 original studio albums. This analysis includes a sentiment breakdown of each album’s lyrics, identifying the dominant emotions and visualizing the emotional connections using a chord diagram. I also heavily used the base R graph to add text, adjust margins, and add image on top of things.
+
+As shown in the diagram, Taylor’s songwriting goes far beyond the stereotype of “sad breakup songs.” Each album features a rich and diverse emotional palette. Words associated with joy and anticipation appear more frequently than negative emotions such as sadness or disgust. Notably, her latest album, The Tortured Poets Department (TTPD), stands out as the most emotionally saturated work to date, featuring the highest number of sentiment-laden words—solidifying its place as one of her most expressive and evocative albums.
+
+
+```{r, fig.width = 12, fig.height = 12, out.width = '100%', dev = 'pdf'}
+# Non-interactive
+
+# Load required libraries
+library(tidyverse)
+library(tidytext)
+library(circlize)
+library(magick)
+library(grid)
+
+
+# Emotion by word
+
+# STEP 1: Load and preprocess lyrics
+lyrics = read.csv("taylor_lyrics.csv", stringsAsFactors = FALSE)
+
+tidy_lyrics = lyrics %>%
+  unnest_tokens(word, lyrics)
+
+emotion_counts = tidy_lyrics %>%
+  inner_join(get_sentiments("nrc"), by = "word") %>%
+  filter(!sentiment %in% c("positive", "negative")) %>%
+  count(album, sentiment) %>%
+  group_by(album, sentiment) %>%
+  summarise(sentiment_sum = sum(n), .groups = "drop")
+
+# STEP 2: Define colors
+emotion_colors = c(
+  "anger" = "#e63946",
+  "anticipation" = "#ffbe0b",
+  "disgust" = "#6a994e",
+  "fear" = "#5f0f40",
+  "joy" = "#f78da7",         # changed for better contrast
+  "sadness" = "#457b9d",
+  "surprise" = "#8338ec",
+  "trust" = "#06d6a0"
+)
+
+albums = unique(emotion_counts$album)
+album_colors = rep("grey85", length(albums))
+names(album_colors) = albums
+
+grid.col = c(emotion_colors, album_colors)
+
+# STEP 3: Prepare chord data (emotion → album)
+chord_data = emotion_counts %>%
+  select(sentiment, album, sentiment_sum)
+
+# Sort emotions and albums by total contribution
+emotion_order = chord_data %>%
+  group_by(sentiment) %>%
+  summarise(total = sum(sentiment_sum)) %>%
+  arrange(total) %>%
+  pull(sentiment)
+
+album_order = chord_data %>%
+  group_by(album) %>%
+  summarise(total = sum(sentiment_sum)) %>%
+  arrange(total) %>%
+  pull(album)
+
+chord_data$sentiment = factor(chord_data$sentiment, levels = emotion_order)
+chord_data$album = factor(chord_data$album, levels = album_order)
+
+# Sort rows to ensure order in diagram
+chord_data = chord_data %>%
+  arrange(sentiment, album)
+
+
+# Save to PNG (high-res, square, black background)
+png("taylor_emotion_chord_base.png", width = 2000, height = 2000, res = 300, bg = "black")
+
+
+# STEP 4: Draw chord diagram
+par(bg = "black")  # minimal dark mode, only changes bg color
+
+circos.clear()
+circos.par(
+  canvas.xlim = c(-1.1, 1.1),
+  canvas.ylim = c(-0.9, 1.3),
+  gap.after = c(
+    rep(3, length(emotion_order) - 1), 8,
+    rep(3, length(album_order) - 1), 8
+  )
+)
+
+# Base chord plot
+chordDiagram(chord_data, grid.col = grid.col, transparency = 0.2)
+
+# White sector labels
+circos.trackPlotRegion(
+  track.index = 1,
+  bg.border = NA,
+  panel.fun = function(x, y) {
+    sector = get.cell.meta.data("sector.index")
+    xcenter = get.cell.meta.data("xcenter")
+    circos.text(
+      x = xcenter, y = 0,
+      labels = sector,
+      facing = "inside",
+      niceFacing = TRUE,
+      col = "white",  # white text for dark mode
+      cex = 0.7
+    )
+  }
+)
+
+# White title
+title("What Emotions Go into Taylor Swift's Albums?", col.main = "white", cex = 3, line = 0.2)
+# Subtitle explanation (white, small, italic)
+mtext("Arc size = total count of emotion-related words.\nEmotions and albums are ordered clockwise by total volume.",
+      side = 3, line = -2.1, col = "white", cex = 1, font = 3)
+dev.off()  # finish the plot and write the PNG
+
+
+#Put album cover below each album
+library(magick)
+
+# Load base plot image
+img_base = image_read("taylor_emotion_chord_base.png")
+
+# Manually place each album cover
+img_base = image_composite(img_base, image_read("Manim/taylor_swift.webp") %>% image_resize("100x100"), offset = "+100+1100")
+img_base = image_composite(img_base, image_read("Manim/midnights.webp")    %>% image_resize("100x100"), offset = "+130+950")
+img_base = image_composite(img_base, image_read("Manim/folklore.webp")     %>% image_resize("100x100"), offset = "+200+740")
+img_base = image_composite(img_base, image_read("Manim/evermore.webp")     %>% image_resize("100x100"), offset = "+300+560")
+img_base = image_composite(img_base, image_read("Manim/reputation.webp")   %>% image_resize("100x100"), offset = "+440+430")
+img_base = image_composite(img_base, image_read("Manim/speak_now.webp")    %>% image_resize("100x100"), offset = "+640+330")
+img_base = image_composite(img_base, image_read("Manim/1989.webp")         %>% image_resize("100x100"), offset = "+890+260")
+img_base = image_composite(img_base, image_read("Manim/red.webp")          %>% image_resize("100x100"), offset = "+1150+300")
+img_base = image_composite(img_base, image_read("Manim/fearless.webp")     %>% image_resize("100x100"), offset = "+1400+380")
+img_base = image_composite(img_base, image_read("Manim/lover.webp")        %>% image_resize("100x100"), offset = "+1600+550")
+img_base = image_composite(img_base, image_read("Manim/the_tortured_poets_department.webp")   %>% image_resize("100x100"), offset = "+1730+800")
+
+img_base
+
+# Save final image
+image_write(img_base, "taylor_emotion_chord_with_covers.png")
+
+image_read("taylor_emotion_chord_with_covers.png")
+```
+
+
+```{r}
+# Emotion by sentence
+
+# STEP 1: Load and preprocess lyrics
+sentences = lyrics %>%
+  unnest_tokens(sentence, lyrics, token = "sentences") %>%
+  mutate(sentence_id = row_number())
+tidy_sentences = sentences %>%
+  unnest_tokens(word, sentence)
+emotion_counts = tidy_sentences %>%
+  inner_join(get_sentiments("nrc"), by = "word") %>%
+  filter(!sentiment %in% c("positive", "negative")) %>%
+  distinct(album, sentence_id, sentiment) %>%
+  count(album, sentiment, name = "sentiment_sum")
+
+# STEP 2: Define colors
+emotion_colors = c(
+  "anger" = "#e63946",
+  "anticipation" = "#ffbe0b",
+  "disgust" = "#6a994e",
+  "fear" = "#5f0f40",
+  "joy" = "#f78da7",         # changed for better contrast
+  "sadness" = "#457b9d",
+  "surprise" = "#8338ec",
+  "trust" = "#06d6a0"
+)
+
+albums = unique(emotion_counts$album)
+album_colors = rep("grey85", length(albums))
+names(album_colors) = albums
+
+grid.col = c(emotion_colors, album_colors)
+
+# STEP 3: Prepare chord data (emotion → album)
+chord_data = emotion_counts %>%
+  select(sentiment, album, sentiment_sum)
+
+# Sort emotions and albums by total contribution
+emotion_order = chord_data %>%
+  group_by(sentiment) %>%
+  summarise(total = sum(sentiment_sum)) %>%
+  arrange(total) %>%
+  pull(sentiment)
+
+album_order = chord_data %>%
+  group_by(album) %>%
+  summarise(total = sum(sentiment_sum)) %>%
+  arrange(total) %>%
+  pull(album)
+
+chord_data$sentiment = factor(chord_data$sentiment, levels = emotion_order)
+chord_data$album = factor(chord_data$album, levels = album_order)
+
+# Sort rows to ensure order in diagram
+chord_data = chord_data %>%
+  arrange(sentiment, album)
+
+
+# Save to PNG (high-res, square, black background)
+png("taylor_emotion_chord_base.png", width = 2000, height = 2000, res = 300, bg = "black")
+
+
+# STEP 4: Draw chord diagram
+par(bg = "black")  # minimal dark mode, only changes bg color
+
+circos.clear()
+circos.par(
+  canvas.xlim = c(-1.1, 1.1),
+  canvas.ylim = c(-0.9, 1.3),
+  gap.after = c(
+    rep(3, length(emotion_order) - 1), 8,
+    rep(3, length(album_order) - 1), 8
+  )
+)
+
+# Base chord plot
+chordDiagram(chord_data, grid.col = grid.col, transparency = 0.2)
+
+# White sector labels
+circos.trackPlotRegion(
+  track.index = 1,
+  bg.border = NA,
+  panel.fun = function(x, y) {
+    sector = get.cell.meta.data("sector.index")
+    xcenter = get.cell.meta.data("xcenter")
+    circos.text(
+      x = xcenter, y = 0,
+      labels = sector,
+      facing = "inside",
+      niceFacing = TRUE,
+      col = "white",  # white text for dark mode
+      cex = 0.7
+    )
+  }
+)
+
+# White main title
+title("Emotions Behind Taylor Swift's Albums", col.main = "white", cex.main = 2, line = -1)
+
+# White subtitle (italic, smaller font)
+mtext("Arc size represents the number of sentences mentioning each emotion.\nAlbums and emotions are arranged clockwise by volume.",
+      side = 3, line = -3.5, col = "white", cex = 1, font = 3)
+dev.off()  # finish the plot and write the PNG
+
+
+#Put album cover below each album
+library(magick)
+
+# Load base plot image
+img_base = image_read("taylor_emotion_chord_base.png")
+
+# Manually place each album cover
+img_base = image_composite(img_base, image_read("Manim/taylor_swift.webp") %>% image_resize("100x100"), offset = "+100+1100")
+img_base = image_composite(img_base, image_read("Manim/midnights.webp")    %>% image_resize("100x100"), offset = "+130+950")
+img_base = image_composite(img_base, image_read("Manim/folklore.webp")     %>% image_resize("100x100"), offset = "+200+740")
+img_base = image_composite(img_base, image_read("Manim/evermore.webp")     %>% image_resize("100x100"), offset = "+300+560")
+img_base = image_composite(img_base, image_read("Manim/reputation.webp")   %>% image_resize("100x100"), offset = "+440+430")
+img_base = image_composite(img_base, image_read("Manim/speak_now.webp")    %>% image_resize("100x100"), offset = "+640+345")
+img_base = image_composite(img_base, image_read("Manim/1989.webp")         %>% image_resize("100x100"), offset = "+890+260")
+img_base = image_composite(img_base, image_read("Manim/red.webp")          %>% image_resize("100x100"), offset = "+1150+300")
+img_base = image_composite(img_base, image_read("Manim/fearless.webp")     %>% image_resize("100x100"), offset = "+1400+380")
+img_base = image_composite(img_base, image_read("Manim/lover.webp")        %>% image_resize("100x100"), offset = "+1600+550")
+img_base = image_composite(img_base, image_read("Manim/the_tortured_poets_department.webp")   %>% image_resize("100x100"), offset = "+1730+800")
+
+img_base
+
+# Save final image
+image_write(img_base, "taylor_emotion_chord_with_covers2.png")
+
+image_read("taylor_emotion_chord_with_covers2.png")
+
+
+
+```
+
+
+
+# Option 2: Geographical plot
+This part visualizes the Eras Tour concert cities, concert count, and contert ticket sales on a map; it also plot the routes of the tour, connecting the neighboring concert cities.
+
+```{r}
+# Load libraries
+library(readr)
+library(dplyr)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(leaflet.extras)
+library(viridisLite)  # for the viridis palette
+
+# Load the dataset
+era_tour = read_csv("eras_tour.csv")
+
+# Step 1: Clean and parse geometry (each row is one concert)
+era_tour_clean = era_tour %>%
+  filter(!is.na(wkt_geom)) %>%
+  mutate(
+    wkt_geom = toupper(wkt_geom),
+    geometry = st_as_sfc(wkt_geom, crs = 4326)
+  ) %>%
+  st_as_sf()
+
+# Step 2: Extract lon/lat from geometry
+era_tour_clean = era_tour_clean %>%
+  mutate(
+    lon = st_coordinates(geometry)[, 1],
+    lat = st_coordinates(geometry)[, 2]
+  )
+
+# NEW STEP: Aggregate data by city so that each city marker reflects total tick_sales and concert count.
+city_summary = era_tour_clean %>%
+  group_by(city, lon, lat, place, country) %>%
+  summarize(
+    num_concerts = n(),
+    tick_sales_total = sum(tick_sales, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+album_colors = c(
+  "#FFF4E5",  # pale cream beige
+  "#FAD5C6",  # soft peachy pink
+  "#EABFD3",  # pastel rose
+  "#D9B9E5",  # muted lilac
+  "#BDA9DD",  # smoky lavender
+  "#A7B8D8",  # soft slate blue
+  "#94A7BF",  # dusty steel blue
+  "#8098AC",  # faded periwinkle
+  "#6A8398",  # cool gray-blue
+  "#505C6A"  # deep stone gray
+)
+
+# Step 3: Define an album palette for tick_sales_total (low = yellow, high = blue-purple)
+tick_sales_pal = colorNumeric(
+  palette = album_colors ,
+  domain = city_summary$tick_sales_total,
+  reverse = FALSE
+)
+
+# Step 4: Create rich hover labels for the markers using aggregated values.
+city_summary = city_summary %>%
+  mutate(
+    bubble_color = tick_sales_pal(tick_sales_total),
+    label = paste0(
+      "<div style='font-size:16px; background-color:", bubble_color, 
+         "; color:black; padding:4px;'><b>", city, "</b></div>",
+      "<strong>Venue:</strong> ", place, "<br/>",
+      "<strong>Number of Concerts:</strong> ", num_concerts, "<br/>",
+      "<strong>Number of Tickets Sold:</strong> ", tick_sales_total
+    )
+  )
+
+# Step 5: Parse the date column and sort by date for tour segments.
+# (This uses the original concert-level data; you may have multiple concerts per city.
+# The route (arrow) segments will be drawn between consecutive concerts as stored in era_tour_clean.)
+era_tour_clean$date_parsed = as.Date(era_tour_clean$date, format = "%d.%m.%Y")
+era_tour_sorted = era_tour_clean %>% arrange(date_parsed)
+
+# Step 6: Create LINESTRINGs for tour segments (skip degenerate segments)
+arrow_list = lapply(1:(nrow(era_tour_sorted) - 1), function(i) {
+  coords = rbind(
+    c(era_tour_sorted$lon[i], era_tour_sorted$lat[i]),
+    c(era_tour_sorted$lon[i + 1], era_tour_sorted$lat[i + 1])
+  )
+  if (nrow(coords) < 2 || isTRUE(all.equal(coords[1, ], coords[2, ], tolerance = 1e-6))) {
+    return(NULL)
+  } else {
+    st_linestring(coords)
+  }
+})
+arrow_list = Filter(Negate(is.null), arrow_list)
+arrow_sf = st_sf(
+  layer_id = paste0("arrow_", seq_along(arrow_list)),
+  geometry = st_sfc(arrow_list, crs = 4326)
+)
+
+# Compute rotation angle (in degrees) for each segment using atan2
+arrow_sf$angle = sapply(1:nrow(arrow_sf), function(i) {
+  coords = st_coordinates(arrow_sf[i, ])
+  atan2(coords[2, 2] - coords[1, 2], coords[2, 1] - coords[1, 1]) * 180 / pi
+})
+
+# Step 7: Define country label positions (nudge positions to avoid overlap)
+country_labels = era_tour_clean %>%
+  group_by(country) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(
+    lon_adj = case_when(
+      country == "France" ~ lon + 0.8,
+      country == "Germany" ~ lon + 1,
+      country == "Spain" ~ lon - 0.5,
+      country == "UK" ~ lon + 1,
+      TRUE ~ lon
+    ),
+    lat_adj = case_when(
+      country == "France" ~ lat - 1,
+      country == "Germany" ~ lat + 0.8,
+      country == "Spain" ~ lat - 0.3,
+      country == "UK" ~ lat + 0.4,
+      TRUE ~ lat
+    )
+  )
+
+# Step 8: Define a custom arrow icon (replace "arrow.svg" with your image's path or URL)
+arrow_icon = makeIcon(
+  iconUrl = "arrow.svg",
+  iconWidth = 20,
+  iconHeight = 20,
+  iconAnchorX = 10,
+  iconAnchorY = 10
+)
+
+# Step 9: Build the Leaflet map (light theme: default OSM tiles)
+m = leaflet() %>%
+  addTiles() %>%
+  
+  # Add concert markers using the aggregated city_summary data.
+  addCircleMarkers(
+    data = city_summary,
+    lng = ~lon, lat = ~lat,
+    radius = ~num_concerts * 2.5,
+    color = ~tick_sales_pal(tick_sales_total),
+    stroke = TRUE,
+    fillOpacity = 0.8,
+    label = ~lapply(label, HTML),
+    group = "Concerts"
+  )
+
+# Step 10: Draw tour segments as a route (blue polylines) from consecutive concerts.
+for (i in 1:nrow(arrow_sf)) {
+  coords_i = st_coordinates(arrow_sf[i, ])
+  if (nrow(coords_i) < 2 || isTRUE(all.equal(coords_i[1, ], coords_i[2, ], tolerance = 1e-6))) {
+    next
+  }
+  
+  m = m %>% addPolylines(
+    data = arrow_sf[i, ],
+    color = "blue",
+    weight = 2,
+    opacity = 0.5,
+    group = "Route",
+    layerId = arrow_sf$layer_id[i]
+  )
+}
+
+# Step 11: Add responsive country labels (group "Concerts")
+m = m %>% addLabelOnlyMarkers(
+  data = country_labels,
+  lng = ~lon_adj, lat = ~lat_adj,
+  label = ~country,
+  labelOptions = labelOptions(
+    noHide = TRUE,
+    direction = 'right',
+    textOnly = TRUE,
+    className = "country-label"
+  )
+)
+
+# Step 12: Add layers control for "Concerts" and "Route"
+m = m %>% addLayersControl(
+  overlayGroups = c("Concerts", "Route"),
+  options = layersControlOptions(collapsed = FALSE)
+)
+
+# Step 13: Add dynamic zoom-based label scaling via CSS and JavaScript
+zoom_css = tags$style(HTML("
+  .leaflet-label.country-label {
+    font-weight: bold;
+    color: black;
+    font-size: 24px;
+    transition: transform 0.2s;
+  }
+"))
+zoom_js = tags$script(HTML("
+  function scaleCountryLabels() {
+    var zoom = map.getZoom();
+    var scale = Math.pow(2, zoom - 5);
+    var labels = document.getElementsByClassName('country-label');
+    for (var i = 0; i < labels.length; i++) {
+      labels[i].style.transform = 'scale(' + scale + ')';
+      labels[i].style.transformOrigin = 'left center';
+    }
+  }
+  map.on('zoom', scaleCountryLabels);
+  map.whenReady(scaleCountryLabels);
+"))
+m = m %>% prependContent(zoom_css, zoom_js)
+
+# Step 14: Add the RotatedMarker plugin so that markers respect rotation (if needed later)
+m = m %>% htmlwidgets::prependContent(
+  tags$script(src = "https://raw.githubusercontent.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js")
+)
+
+# --- New addition: Title and Subtitle as usual ---
+title_html = tags$div(
+  tags$h1("Eras Tour Map: Concert Routes & Ticket Sales", 
+          style = "text-align:center;margin:0 0 20px 0;"),
+  tags$h2("Bubble size: concert count, Bubble color: ticket sales, hover over a city bubble for more info", 
+          style = "text-align:center;margin:0; font-size:24px;")
+)
+m = m %>% addControl(
+  html = as.character(title_html),
+  position = 'topleft'
+)
+
+# Step 15: Add a legend at the bottom left for tick_sales
+m = m %>% addLegend(
+  position = "bottomleft",
+  pal = tick_sales_pal,
+  values = city_summary$tick_sales_total,
+  title = "Ticket Sales",
+  opacity = 1
+)
+
+# Step 16: Save and display the map
+saveWidget(m, "eras_tour_map.html", selfcontained = TRUE)
+browseURL("eras_tour_map.html")
+
+
+```
+
+
+
+
+
+```{r}
+#Abandoned
+# Use 3D Bins is harder for human eyes to compare
+
+library(dplyr)
+library(readr)
+library(plotly)
+library(scales)
+
+# Load dataset
+eras = read_csv("eras_tour.csv")
+
+# Define your custom concert count color palette
+album_colors = c(
+  "#FFF4E5", "#FAD5C6", "#EABFD3", "#D9B9E5", "#BDA9DD",
+  "#A7B8D8", "#94A7BF", "#8098AC", "#6A8398", "#505C6A"
+)
+
+concert_palette = col_numeric(palette = album_colors, domain = NULL)
+
+# Preprocess
+eras = eras %>%
+  mutate(date_parsed = as.Date(date, format = "%d.%m.%Y")) %>%
+  arrange(date_parsed) %>%
+  group_by(city, x, y, country) %>%
+  mutate(n_concerts = n()) %>%
+  ungroup()
+
+# Summary for bins and labels
+city_summary = eras %>%
+  group_by(city, x, y, country) %>%
+  summarize(
+    total_sales = sum(tick_sales, na.rm = TRUE),
+    n_concerts = n(),
+    place = first(place),
+    .groups = "drop"
+  )
+
+# One label per country
+country_labels = city_summary %>%
+  group_by(country) %>%
+  slice(1) %>%
+  ungroup()
+
+# Color scale
+city_summary = city_summary %>%
+  mutate(color = concert_palette(n_concerts))
+
+# Start map
+fig <- plot_geo(city_summary)
+
+# 1. Add fixed-size bubbles, color = concert count
+fig <- fig %>%
+  add_markers(
+    x = ~x, y = ~y,
+    color = ~n_concerts,
+    colors = album_colors,
+    cmin = min(city_summary$n_concerts),
+    cmax = max(city_summary$n_concerts),
+    marker = list(
+      size = 10,  # fixed size
+      line = list(width = 1, color = "black")
+    ),
+    text = ~paste0(
+      "<span style='font-size:20px'><b>", city, "</b></span><br>",
+      place, "<br>",
+      n_concerts, " concerts<br>",
+      formatC(total_sales, format = "d", big.mark = ","), " tickets"
+    ),
+    hoverinfo = "text",
+    name = "Number of Concerts",
+    showlegend = TRUE
+  )
+
+# 2. Arrows for concert sequence
+ordered_eras = eras %>% filter(!is.na(x) & !is.na(y)) %>% arrange(date_parsed)
+
+for (i in 1:(nrow(ordered_eras) - 1)) {
+  fig <- fig %>%
+    add_trace(
+      type = "scattergeo",
+      mode = "lines",
+      lon = c(ordered_eras$x[i], ordered_eras$x[i + 1]),
+      lat = c(ordered_eras$y[i], ordered_eras$y[i + 1]),
+      line = list(width = 1.5, color = "skyblue"),
+      showlegend = FALSE,
+      hoverinfo = "none"
+    )
+}
+
+# 3. Ticket sales bins = same color as bubble
+scale_factor = 0.00005
+for (i in 1:nrow(city_summary)) {
+  fig <- fig %>%
+    add_trace(
+      type = "scattergeo",
+      mode = "lines",
+      lon = rep(city_summary$x[i], 2),
+      lat = c(city_summary$y[i],
+              city_summary$y[i] + city_summary$total_sales[i] * scale_factor),
+      line = list(color = city_summary$color[i], width = 4),
+      opacity = 0.4,
+      showlegend = FALSE,
+      hoverinfo = "none"
+    )
+}
+
+# 4. Country labels (once)
+fig <- fig %>%
+  add_trace(
+    type = "scattergeo",
+    mode = "text",
+    data = country_labels,
+    x = ~x, y = ~y,
+    text = ~country,
+    textposition = "top center",
+    textfont = list(color = "white", size = 10),
+    hoverinfo = "none",
+    showlegend = FALSE
+  )
+
+# 5. Final layout
+fig <- fig %>%
+  layout(
+    title = list(
+      text = "Eras Tour Map: Concert Route & Ticket Sales<br><span style='font-size:14px'>hover over for more information</span>",
+      font = list(size = 20, color = "#FFFFFF"),
+      x = 0.5,
+      xanchor = "center"
+    ),
+    geo = list(
+      projection = list(type = "equirectangular"),
+      showland = TRUE,
+      landcolor = "#1c1c1e",
+      showocean = TRUE,
+      oceancolor = "#0f1c2e",
+      lakecolor = "#0f1c2e",
+      bgcolor = "#0f0f0f",
+      countrycolor = "#E8E6E1",
+      countrywidth = 0.5,
+      coastlinecolor = "#777777",
+      showcoastlines = TRUE,
+      coastlinewidth = 0.4,
+      showframe = FALSE,
+      lonaxis = list(showgrid = FALSE),
+      lataxis = list(showgrid = FALSE)
+    ),
+    paper_bgcolor = "#0f0f0f",
+    plot_bgcolor = "#0f0f0f",
+    font = list(family = "Arial", color = "#FFFFFF"),
+    legend = list(
+      title = list(text = "<b>Number of Concerts</b>"),
+      bgcolor = "#0f0f0f",
+      font = list(color = "white")
+    )
+  )
+
+fig
+
+
+
+```
+
