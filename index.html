@@ -9,18 +9,29 @@
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       color: white;
-      background: url("swift_vertical_background.png") no-repeat center top;
+      background: url("infographic_material/swift_vertical_background.png") no-repeat center top;
       background-size: cover;
       background-attachment: scroll;
     }
 
-    .section {
+    .section-wrapper {
       max-width: 95%;
-      margin: 80px auto;
+      margin: 40px auto;
+    }
+
+    .section {
       padding: 40px;
       background-color: rgba(0, 0, 0, 0.6);
       border-radius: 16px;
       box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    }
+
+    .row-flex {
+      display: flex;
+      gap: 30px;
+      max-width: 95%;
+      margin: 40px auto;
+      align-items: stretch;
     }
 
     .two-col {
@@ -41,7 +52,7 @@
     }
 
     .section p {
-      font-size: 16px;
+      font-size: 24px;
       line-height: 1.6;
       color: #f0f0f0;
     }
@@ -67,24 +78,26 @@
 
     .intro-title {
       font-family: 'Playfair Display', serif;
-      font-size: 32px;
+      font-size: 48px;
+      line-height: 1.2;
       color: #ffe8f0;
     }
 
     .intro-subtitle {
       font-style: italic;
-      font-size: 18px;
+      font-size: 24px;
+      line-height: 1.2;
       color: #d9bce3;
       margin-bottom: 16px;
     }
 
     .signature {
-      width: 200px;
+      width: 300px;
       display: block;
     }
 
     @media (max-width: 900px) {
-      .two-col, .intro-title-row {
+      .two-col, .intro-title-row, .row-flex {
         flex-direction: column;
         text-align: center;
       }
@@ -92,65 +105,123 @@
         margin: 0 auto;
       }
     }
+    
+    #music-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+#music-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+#music-toggle img {
+  width: 32px;
+  height: 32px;
+}
   </style>
 </head>
-<body>
 
-  <div class="section" style="text-align: center;">
+<audio id="bg-music" autoplay loop>
+  <source src="infographic_material/background_music.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
+
+
+<script>
+  const bgMusic = document.getElementById("bg-music");
+  let isPlaying = false;
+
+  function toggleMusic() {
+    if (isPlaying) {
+      bgMusic.pause();
+    } else {
+      bgMusic.play();
+    }
+    isPlaying = !isPlaying;
+  }
+</script>
+
+<body>
+  
+<div id="music-toggle" onclick="toggleMusic()" title="Toggle Music">
+  <img src="infographic_material/record.svg" alt="Play Music" />
+</div>
+
+  <div style="text-align: center; margin: 80px auto;">
     <div class="intro-title-row" style="justify-content: center;">
       <img src="infographic_material/signature_white.svg" alt="Taylor Swift Signature" class="signature">
       <div class="intro-title">A Data Portrait of Eras</div>
     </div>
-    <div class="intro-subtitle">I've got a blank space baby - and I'll plot your name</div>
-    <p style="margin-top: 20px;">Taylor Swift's discography is a journey through music, emotion, and evolution. This infographic visualizes her art in data-driven ways.</p>
+    <div class="intro-subtitle">"I've got a blank space baby - and I'll plot your name"</div>
+    <p style="margin-top: 20px;font-size: 20px">Taylor Swift’s discography spans nearly two decades of evolution in sound, storytelling, and cultural impact. </p>
   </div>
 
-  <div class="section two-col">
-    <div class="left">
-      <h2></h2>
-      <img src="infographic_material/taylor_pixel_art.gif" class="media" alt="Taylor Swift Pixel Art">
-    </div>
-    <div class="right">
-      <h2>placeholder</h2>
-      <p>placeholder.<br>
-         placeholder.<br>
-         placeholder.</p>
-      <video controls class="media" src="infographic_material/TaylorSwiftAlbumTimeline.mp4"></video>
+
+
+  <div class="section-wrapper">
+    <div class="section two-col">
+      <div class="left">
+        <h2></h2>
+        <img src="infographic_material/taylor_pixel_art.gif" class="media" alt="Taylor Swift Pixel Art">
+      </div>
+      <div class="right">
+        <h2>1. Sales Across Eras: Taylor Swift’s Discography Timeline</h2>
+        <p>To date, Taylor Swift has released a total of 19 albums, including 11 original studio albums, 4 re-recorded albums, and 4 live albums. <em>1989</em> marked her first full transition from country to pop and achieved record-breaking sales. Meanwhile, <em>Evermore</em>, released just five months after Folklore during the pandemic, is often regarded by fans as an underrated gem. While it did not match the commercial success of others, Folklore holds a special place among fans for its quiet introspection and fictional storytelling. </p>
+        <video controls class="media" src="infographic_material/TaylorSwiftAlbumTimeline.mp4" style="height: 750px;"></video>
+      </div>
     </div>
   </div>
 
-  <div class="section two-col">
-    <div class="left">
-      <h2>placeholder</h2>
-      <p>placeholder.<br>
-         placeholder<br>
-         placeholder</p>
-      <div style="width: 70%; margin-top: 15px;">
+  <div class="row-flex">
+    <div class="section" style="flex: 1;">
+      <h2>2. Emotions Across Eras: More than just Sad Breakup Songs </h2>
+      <p>Taylor’s songwriting goes far beyond the stereotype of “sad breakup songs”. Each album features a rich and diverse emotional palette. Words associated with joy and anticipation appear more frequently than negative emotions such as sadness or disgust. Notably, her latest album, <em>The Tortured Poets Department (TTPD)</em>, stands out as the most emotionally saturated work to date, featuring the highest number of sentiment-laden words—solidifying its place as one of her most expressive and evocative albums.
+      
+      </p>
+      <div style="width: 100%; margin-top: 15px;">
         <img src="infographic_material/taylor_emotion_chord_with_covers.png" class="media" alt="Emotion Chord Diagram">
       </div>
     </div>
-    <div class="right">
-      <h2>placeholder</h2>
-      <p>placeholder<br>
-         placeholder<br>
-         placeholder.</p>
-      <iframe src="infographic_material/song_popularity_plot.html" height="600" class="media"></iframe>
+
+    <div class="section" style="flex: 1.5;">
+       <iframe src="infographic_material/song_popularity_plot.html" height="950" class="media"></iframe>
+      <h2 style="margin-top: 12px;">3. Song Popularity Investigation: What Catches Swifties' Ears?</h2>
+      <p> Swifties tend to favor songs with lower danceability and longer durations — reflecting Taylor Swift’s focus on lyrical storytelling over rhythmic appeal. Her most celebrated tracks often unfold as narrative journeys, rich in emotion and imagery. Songs like <em>All Too Well (10 Minute Version)</em>, <em>Cruel Summer</em>, <em>Fortnight</em>, and <em>Lover</em> exemplify this: expansive, emotionally layered, and rooted in narratives that transcend typical pop formulas.
+      </p>
+     
     </div>
   </div>
 
-  <div class="section">
-    <h2>placeholder</h2>
-    <p>placeholder.<br>
-       placeholder<br>
-       placeholder</p>
-    <iframe src="infographic_material/eras_tour_map.html" height="600" class="media"></iframe>
+  <div class="section-wrapper">
+    <div class="section">
+      <h2>4. Touring Across Eras: A Worldwide Celebration of Swifties</h2>
+      <p>Spanning 149 shows across 5 continents, 51 cities, and 21 countries, Taylor Swift's Eras Tour was a massive cultural phenomenon, attracting unprecedented ticket demand and generating billions in revenue. The tour’s footprint was especially strong in major global hubs. London hosted the most shows with eight performances, followed by Los Angeles, Toronto, and Singapore with six each, and Tokyo with four. In terms of ticket sales, London led with 720,000, followed by Los Angeles (601,440), Sydney (336,000), Singapore (330,000), and Arlington (315,000). Closely following Arlington, our Toronto shows sold around 300,000 tickets. Lasting 632 days from March 17, 2023, the tour came to an end at its last stop in Vancouver on December 8, 2024. </p>
+      <iframe src="infographic_material/eras_tour_map.html" height="800" style="width: 100%; border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);"></iframe>
+    </div>
   </div>
 
-  <hr style="border: none; height: 4px; width: 60%; margin: 60px auto 30px auto; background: linear-gradient(to right, #f5c1cc, #cba3d8, #94a7bf);">
-  <div style="text-align: center; font-size: 14px; font-family: 'Playfair Display', serif; color: #2c3e50; padding: 40px 0;">
-    <p>Made by: Yuxin Gong</p>
-    <p>Data source: <a href="https://www.chartmasters.org/" style="color: #2c3e50; text-decoration: underline;">ChartMasters.org</a></p>
-  </div>
-  
+<hr style="border: none; height: 4px; width: 60%; margin: 60px auto 30px auto; background: linear-gradient(to right, #f5c1cc, #cba3d8, #94a7bf);">
+
+<div style="text-align: center; font-size: 14px; font-family: 'Playfair Display', serif; color: #2c3e50; padding: 40px 0;">
+  <p>Made by: Yuxin Gong</p>
+  <p>Data Sources:</p>
+  <p>
+    <a href="https://www.chartmasters.org/" style="color: #2c3e50; text-decoration: underline;">ChartMasters – Album & Song Sales</a><br>
+    <a href="https://www.kaggle.com/datasets/jarredpriester/taylor-swift-spotify-dataset/data?select=taylor_swift_spotify.csv" style="color: #2c3e50; text-decoration: underline;">Kaggle – Taylor Swift Spotify Dataset</a><br>
+    <a href="https://www.kaggle.com/datasets/tymonbot/taylor-swift-eras-toure" style="color: #2c3e50; text-decoration: underline;">Kaggle – Taylor Swift Eras Tour Dataset</a><br>
+    <a href="https://www.kaggle.com/datasets/ishikajohari/taylor-swift-all-lyrics-30-albums" style="color: #2c3e50; text-decoration: underline;">Kaggle – Taylor Swift All Lyrics (30 Albums)</a><br>
+    <a href="https://www.kaggle.com/datasets/lucynewman/taylor-swift-lyrics-through-2024-ttpd" style="color: #2c3e50; text-decoration: underline;">Kaggle – Lyrics Through 2024 (with TTPD)</a><br>
+    <a href="https://www.kaggle.com/datasets/tksmax/taylorswiftlyrics" style="color: #2c3e50; text-decoration: underline;">Kaggle – Taylor Swift Lyrics (64 Albums)</a>
+  </p>
+</div>
+
 </body>
 </html>
