@@ -20,7 +20,7 @@ Below shows the objectives of this project and how it fulfills the requirements 
 4. Final Submission\
 (1) HTML page: https://angethebot.github.io/Taylor-Swift-Visualization/ \
 (2) infographic_with_music.zip \
-&nbsp;&nbsp;&nbsp;&nbsp;a. visualization_code folder
+a. visualization_code folder
     - Manim:
        - Python code is in TaylorSwiftAlbumTimeline.ipynb;
        - 11 album cover webp; data is in album_sales;
